@@ -175,6 +175,16 @@ set_property PACKAGE_PIN AA1 [get_ports {GT_SERIAL_RX_0_rxn[0]}]
 set_property PACKAGE_PIN Y4 [get_ports {GT_SERIAL_TX_0_txp[0]}]
 set_property PACKAGE_PIN Y3 [get_ports {GT_SERIAL_TX_0_txn[0]}]
 
+#We are using MGTREFCLK0 which is FMC_HPC1_GBTCLK0
+set_property PACKAGE_PIN Y7 [get_ports {GT_DIFF_REFCLK0_0_clk_n}]
+set_property PACKAGE_PIN Y8 [get_ports {GT_DIFF_REFCLK0_0_clk_p}]
+
+#Transceiver P2 -> 64b66b
+set_property PACKAGE_PIN W2 [get_ports {GT_SERIAL_RX_1_rxp[0]}]
+set_property PACKAGE_PIN W1 [get_ports {GT_SERIAL_RX_1_rxn[0]}]
+set_property PACKAGE_PIN W6 [get_ports {GT_SERIAL_TX_1_txp[0]}]
+set_property PACKAGE_PIN W5 [get_ports {GT_SERIAL_TX_1_txn[0]}]
+
 # I2C interface (HPC0)
 #   SDA     <-> FMC_LA23_N  <-> A11
 #   SCL     <-> FMC_LA23_P  <-> B11

@@ -135,16 +135,18 @@ xilinx.com:ip:axi_clock_converter:2.1\
 xilinx.com:ip:axi_iic:2.1\
 xilinx.com:ip:clk_wiz:6.0\
 xilinx.com:ip:xlconstant:1.1\
-xilinx.com:ip:aurora_8b10b:11.1\
-xilinx.com:ip:axis_dwidth_converter:1.1\
-xilinx.com:ip:axis_subset_converter:1.1\
+xilinx.com:ip:aurora_64b66b:12.0\
+xilinx.com:ip:axis_data_fifo:2.0\
 xilinx.com:ip:ila:6.2\
 xilinx.com:ip:proc_sys_reset:5.0\
+xilinx.com:ip:aurora_8b10b:11.1\
+xilinx.com:ip:axis_dwidth_converter:1.1\
 xilinx.com:ip:xlslice:1.0\
 xilinx.com:ip:axi_dma:7.1\
 xilinx.com:ip:axi_dwidth_converter:2.1\
 xilinx.com:ip:xlconcat:2.1\
 xilinx.com:ip:zynq_ultra_ps_e:3.3\
+xilinx.com:ip:axis_subset_converter:1.1\
 xilinx.com:ip:floating_point:7.1\
 "
 
@@ -1485,13 +1487,13 @@ proc create_hier_cell_dino { parentCell nameHier } {
   current_bd_instance $oldCurInst
 }
 
-# Hierarchical cell: aurora
-proc create_hier_cell_aurora { parentCell nameHier } {
+# Hierarchical cell: aurora8b10b
+proc create_hier_cell_aurora8b10b { parentCell nameHier } {
 
   variable script_folder
 
   if { $parentCell eq "" || $nameHier eq "" } {
-     catch {common::send_gid_msg -ssname BD::TCL -id 2092 -severity "ERROR" "create_hier_cell_aurora() - Empty argument(s)!"}
+     catch {common::send_gid_msg -ssname BD::TCL -id 2092 -severity "ERROR" "create_hier_cell_aurora8b10b() - Empty argument(s)!"}
      return
   }
 
@@ -1532,6 +1534,7 @@ proc create_hier_cell_aurora { parentCell nameHier } {
 
 
   # Create pins
+  create_bd_pin -dir O -type rst aurora_reset
   create_bd_pin -dir I -type clk init_clk_in
   create_bd_pin -dir O -from 0 -to 0 -type rst s_axis_aresetn
   create_bd_pin -dir O -type clk user_clk_out
@@ -1546,6 +1549,7 @@ proc create_hier_cell_aurora { parentCell nameHier } {
    CONFIG.C_REFCLK_SOURCE {MGTREFCLK1 of Quad X0Y2} \
    CONFIG.C_START_LANE {X0Y10} \
    CONFIG.C_START_QUAD {Quad_X0Y2} \
+   CONFIG.C_USE_CRC {true} \
    CONFIG.SupportLevel {1} \
  ] $aurora_8b10b_0
 
@@ -1562,7 +1566,7 @@ proc create_hier_cell_aurora { parentCell nameHier } {
   
   set_property -dict [ list \
    CONFIG.POLARITY {ACTIVE_HIGH} \
- ] [get_bd_pins /aurora/aurora_reset_0/reset]
+ ] [get_bd_pins /aurora8b10b/aurora_reset_0/reset]
 
   # Create instance: axis_dwidth_converter_0, and set properties
   set axis_dwidth_converter_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_dwidth_converter:1.1 axis_dwidth_converter_0 ]
@@ -1576,35 +1580,6 @@ proc create_hier_cell_aurora { parentCell nameHier } {
    CONFIG.M_TDATA_NUM_BYTES {2} \
    CONFIG.S_TDATA_NUM_BYTES {4} \
  ] $axis_dwidth_converter_1
-
-  # Create instance: axis_subset_converter_0, and set properties
-  set axis_subset_converter_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_subset_converter:1.1 axis_subset_converter_0 ]
-  set_property -dict [ list \
-   CONFIG.M_HAS_TREADY {1} \
- ] $axis_subset_converter_0
-
-  # Create instance: axis_subset_converter_1, and set properties
-  set axis_subset_converter_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_subset_converter:1.1 axis_subset_converter_1 ]
-  set_property -dict [ list \
-   CONFIG.M_HAS_TKEEP {1} \
-   CONFIG.M_HAS_TREADY {0} \
-   CONFIG.M_TDATA_NUM_BYTES {4} \
-   CONFIG.S_HAS_TKEEP {1} \
-   CONFIG.S_TDATA_NUM_BYTES {4} \
-   CONFIG.TDATA_REMAP {tdata[15:0],tdata[31:16]} \
-   CONFIG.TKEEP_REMAP {tkeep[1:0],tkeep[3:2]} \
- ] $axis_subset_converter_1
-
-  # Create instance: axis_subset_converter_2, and set properties
-  set axis_subset_converter_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_subset_converter:1.1 axis_subset_converter_2 ]
-  set_property -dict [ list \
-   CONFIG.M_HAS_TKEEP {1} \
-   CONFIG.M_TDATA_NUM_BYTES {4} \
-   CONFIG.S_HAS_TKEEP {1} \
-   CONFIG.S_TDATA_NUM_BYTES {4} \
-   CONFIG.TDATA_REMAP {tdata[15:0],tdata[31:16]} \
-   CONFIG.TKEEP_REMAP {tkeep[1:0],tkeep[3:2]} \
- ] $axis_subset_converter_2
 
   # Create instance: ila_0, and set properties
   set ila_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:ila:6.2 ila_0 ]
@@ -1645,21 +1620,15 @@ proc create_hier_cell_aurora { parentCell nameHier } {
  ] $xlconstant_3
 
   # Create interface connections
-  #
-  # !!! This throws an error bc CLK_IN_D_0 and aurora_8b10b_0/GT_DIFF_REFCLK1 vivado thinks the pins do not exist -> !!!  this is actually the connection for the aurora intern block not the extern interface
   connect_bd_intf_net -intf_net CLK_IN_D_0_1 [get_bd_intf_pins CLK_IN_D_0] [get_bd_intf_pins aurora_8b10b_0/GT_DIFF_REFCLK1]
-
-  connect_bd_intf_net -intf_net Conn [get_bd_intf_pins axis_dwidth_converter_0/M_AXIS] [get_bd_intf_pins axis_subset_converter_1/S_AXIS]
-  connect_bd_intf_net -intf_net [get_bd_intf_nets Conn] [get_bd_intf_pins axis_dwidth_converter_0/M_AXIS] [get_bd_intf_pins ila_1/SLOT_0_AXIS]
+  connect_bd_intf_net -intf_net Conn [get_bd_intf_pins USER_DATA_M_AXI_RX] [get_bd_intf_pins axis_dwidth_converter_0/M_AXIS]
+  connect_bd_intf_net -intf_net [get_bd_intf_nets Conn] [get_bd_intf_pins USER_DATA_M_AXI_RX] [get_bd_intf_pins ila_1/SLOT_0_AXIS]
   connect_bd_intf_net -intf_net GT_SERIAL_RX_0_1 [get_bd_intf_pins GT_SERIAL_RX_0] [get_bd_intf_pins aurora_8b10b_0/GT_SERIAL_RX]
   connect_bd_intf_net -intf_net aurora_8b10b_0_GT_SERIAL_TX [get_bd_intf_pins GT_SERIAL_TX_0] [get_bd_intf_pins aurora_8b10b_0/GT_SERIAL_TX]
-  connect_bd_intf_net -intf_net aurora_8b10b_0_USER_DATA_M_AXI_RX [get_bd_intf_pins aurora_8b10b_0/USER_DATA_M_AXI_RX] [get_bd_intf_pins axis_subset_converter_0/S_AXIS]
+  connect_bd_intf_net -intf_net aurora_8b10b_0_USER_DATA_M_AXI_RX [get_bd_intf_pins aurora_8b10b_0/USER_DATA_M_AXI_RX] [get_bd_intf_pins axis_dwidth_converter_0/S_AXIS]
   connect_bd_intf_net -intf_net axis_dwidth_converter_1_M_AXIS [get_bd_intf_pins aurora_8b10b_0/USER_DATA_S_AXI_TX] [get_bd_intf_pins axis_dwidth_converter_1/M_AXIS]
-  connect_bd_intf_net -intf_net axis_interconnect_0_M02_AXIS [get_bd_intf_pins S_AXIS] [get_bd_intf_pins axis_subset_converter_2/S_AXIS]
+  connect_bd_intf_net -intf_net axis_interconnect_0_M02_AXIS [get_bd_intf_pins S_AXIS] [get_bd_intf_pins axis_dwidth_converter_1/S_AXIS]
   connect_bd_intf_net -intf_net [get_bd_intf_nets axis_interconnect_0_M02_AXIS] [get_bd_intf_pins S_AXIS] [get_bd_intf_pins ila_2/SLOT_0_AXIS]
-  connect_bd_intf_net -intf_net axis_subset_converter_0_M_AXIS1 [get_bd_intf_pins axis_dwidth_converter_0/S_AXIS] [get_bd_intf_pins axis_subset_converter_0/M_AXIS]
-  connect_bd_intf_net -intf_net axis_subset_converter_1_M_AXIS [get_bd_intf_pins USER_DATA_M_AXI_RX] [get_bd_intf_pins axis_subset_converter_1/M_AXIS]
-  connect_bd_intf_net -intf_net axis_subset_converter_2_M_AXIS [get_bd_intf_pins axis_dwidth_converter_1/S_AXIS] [get_bd_intf_pins axis_subset_converter_2/M_AXIS]
 
   # Create port connections
   connect_bd_net -net aurora_8b10b_0_channel_up [get_bd_pins aurora_8b10b_0/channel_up] [get_bd_pins ila_0/probe1]
@@ -1673,12 +1642,158 @@ proc create_hier_cell_aurora { parentCell nameHier } {
   connect_bd_net -net aurora_8b10b_0_sys_reset_out [get_bd_pins aurora_8b10b_0/sys_reset_out] [get_bd_pins rst_aurora_8b10b_0_50M/ext_reset_in]
   connect_bd_net -net aurora_8b10b_0_tx_lock [get_bd_pins aurora_8b10b_0/tx_lock] [get_bd_pins ila_0/probe9]
   connect_bd_net -net aurora_8b10b_0_tx_resetdone_out [get_bd_pins aurora_8b10b_0/tx_resetdone_out] [get_bd_pins ila_0/probe10]
-  connect_bd_net -net aurora_8b10b_0_user_clk_out [get_bd_pins user_clk_out] [get_bd_pins aurora_8b10b_0/user_clk_out] [get_bd_pins axis_dwidth_converter_0/aclk] [get_bd_pins axis_dwidth_converter_1/aclk] [get_bd_pins axis_subset_converter_0/aclk] [get_bd_pins axis_subset_converter_1/aclk] [get_bd_pins axis_subset_converter_2/aclk] [get_bd_pins ila_0/clk] [get_bd_pins ila_1/clk] [get_bd_pins ila_2/clk] [get_bd_pins rst_aurora_8b10b_0_50M/slowest_sync_clk]
-  connect_bd_net -net aurora_reset_0_reset [get_bd_pins aurora_8b10b_0/gt_reset] [get_bd_pins aurora_8b10b_0/reset] [get_bd_pins aurora_reset_0/reset] [get_bd_pins ila_0/probe0]
-  connect_bd_net -net rst_aurora_8b10b_0_50M_peripheral_aresetn [get_bd_pins s_axis_aresetn] [get_bd_pins axis_dwidth_converter_0/aresetn] [get_bd_pins axis_dwidth_converter_1/aresetn] [get_bd_pins axis_subset_converter_0/aresetn] [get_bd_pins axis_subset_converter_1/aresetn] [get_bd_pins axis_subset_converter_2/aresetn] [get_bd_pins rst_aurora_8b10b_0_50M/peripheral_aresetn]
+  connect_bd_net -net aurora_8b10b_0_user_clk_out [get_bd_pins user_clk_out] [get_bd_pins aurora_8b10b_0/user_clk_out] [get_bd_pins axis_dwidth_converter_0/aclk] [get_bd_pins axis_dwidth_converter_1/aclk] [get_bd_pins ila_0/clk] [get_bd_pins ila_1/clk] [get_bd_pins ila_2/clk] [get_bd_pins rst_aurora_8b10b_0_50M/slowest_sync_clk]
+  connect_bd_net -net aurora_reset_0_reset [get_bd_pins aurora_reset] [get_bd_pins aurora_8b10b_0/gt_reset] [get_bd_pins aurora_8b10b_0/reset] [get_bd_pins aurora_reset_0/reset] [get_bd_pins ila_0/probe0]
+  connect_bd_net -net rst_aurora_8b10b_0_50M_peripheral_aresetn [get_bd_pins s_axis_aresetn] [get_bd_pins axis_dwidth_converter_0/aresetn] [get_bd_pins axis_dwidth_converter_1/aresetn] [get_bd_pins rst_aurora_8b10b_0_50M/peripheral_aresetn]
   connect_bd_net -net xlconstant_2_dout [get_bd_pins aurora_8b10b_0/loopback] [get_bd_pins xlconstant_2/dout]
   connect_bd_net -net xlconstant_3_dout [get_bd_pins aurora_8b10b_0/power_down] [get_bd_pins xlconstant_3/dout]
   connect_bd_net -net zynq_ultra_ps_e_0_pl_clk0 [get_bd_pins init_clk_in] [get_bd_pins aurora_8b10b_0/init_clk_in] [get_bd_pins aurora_reset_0/clk]
+
+  # Restore current instance
+  current_bd_instance $oldCurInst
+}
+
+# Hierarchical cell: aurora64b66b
+proc create_hier_cell_aurora64b66b { parentCell nameHier } {
+
+  variable script_folder
+
+  if { $parentCell eq "" || $nameHier eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2092 -severity "ERROR" "create_hier_cell_aurora64b66b() - Empty argument(s)!"}
+     return
+  }
+
+  # Get object for parentCell
+  set parentObj [get_bd_cells $parentCell]
+  if { $parentObj == "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2090 -severity "ERROR" "Unable to find parent cell <$parentCell>!"}
+     return
+  }
+
+  # Make sure parentObj is hier blk
+  set parentType [get_property TYPE $parentObj]
+  if { $parentType ne "hier" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2091 -severity "ERROR" "Parent <$parentObj> has TYPE = <$parentType>. Expected to be <hier>."}
+     return
+  }
+
+  # Save current instance; Restore later
+  set oldCurInst [current_bd_instance .]
+
+  # Set parent object as current
+  current_bd_instance $parentObj
+
+  # Create cell and set as current instance
+  set hier_obj [create_bd_cell -type hier $nameHier]
+  current_bd_instance $hier_obj
+
+  # Create interface pins
+  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:diff_clock_rtl:1.0 GT_DIFF_REFCLK0_0
+
+  create_bd_intf_pin -mode Slave -vlnv xilinx.com:display_aurora:GT_Serial_Transceiver_Pins_RX_rtl:1.0 GT_SERIAL_RX_1
+
+  create_bd_intf_pin -mode Master -vlnv xilinx.com:display_aurora:GT_Serial_Transceiver_Pins_TX_rtl:1.0 GT_SERIAL_TX_1
+
+  create_bd_intf_pin -mode Master -vlnv xilinx.com:interface:axis_rtl:1.0 USER_DATA_M_AXIS_RX
+
+  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 USER_DATA_S_AXIS_TX
+
+
+  # Create pins
+  create_bd_pin -dir I -type clk init_clk
+  create_bd_pin -dir O -from 0 -to 0 -type rst peripheral_aresetn
+  create_bd_pin -dir I -type rst reset_pb
+  create_bd_pin -dir O -type clk user_clk_out
+
+  # Create instance: aurora_64b66b_0, and set properties
+  set aurora_64b66b_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:aurora_64b66b:12.0 aurora_64b66b_0 ]
+  set_property -dict [ list \
+   CONFIG.CHANNEL_ENABLE {X0Y8} \
+   CONFIG.C_REFCLK_SOURCE {MGTREFCLK0_of_Quad_X0Y2} \
+   CONFIG.C_START_LANE {X0Y8} \
+   CONFIG.C_START_QUAD {Quad_X0Y2} \
+   CONFIG.SupportLevel {1} \
+   CONFIG.drp_mode {Disabled} \
+   CONFIG.flow_mode {Completion_NFC} \
+ ] $aurora_64b66b_0
+
+  # Create instance: axis_data_fifo_0, and set properties
+  set axis_data_fifo_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_data_fifo:2.0 axis_data_fifo_0 ]
+  set_property -dict [ list \
+   CONFIG.FIFO_DEPTH {32} \
+ ] $axis_data_fifo_0
+
+  # Create instance: ila_0, and set properties
+  set ila_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:ila:6.2 ila_0 ]
+  set_property -dict [ list \
+   CONFIG.C_ENABLE_ILA_AXI_MON {false} \
+   CONFIG.C_MONITOR_TYPE {Native} \
+   CONFIG.C_NUM_OF_PROBES {13} \
+ ] $ila_0
+
+  # Create instance: ila_1, and set properties
+  set ila_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:ila:6.2 ila_1 ]
+  set_property -dict [ list \
+   CONFIG.C_NUM_OF_PROBES {9} \
+   CONFIG.C_SLOT_0_AXI_PROTOCOL {AXI4S} \
+ ] $ila_1
+
+  # Create instance: ila_2, and set properties
+  set ila_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:ila:6.2 ila_2 ]
+  set_property -dict [ list \
+   CONFIG.C_NUM_OF_PROBES {9} \
+   CONFIG.C_SLOT_0_AXI_PROTOCOL {AXI4S} \
+ ] $ila_2
+
+  # Create instance: proc_sys_reset_0, and set properties
+  set proc_sys_reset_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_0 ]
+  set_property -dict [ list \
+   CONFIG.C_AUX_RESET_HIGH {0} \
+ ] $proc_sys_reset_0
+
+  # Create instance: xlconstant_0, and set properties
+  set xlconstant_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_0 ]
+  set_property -dict [ list \
+   CONFIG.CONST_VAL {0} \
+   CONFIG.CONST_WIDTH {3} \
+ ] $xlconstant_0
+
+  # Create instance: xlconstant_1, and set properties
+  set xlconstant_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_1 ]
+  set_property -dict [ list \
+   CONFIG.CONST_VAL {0} \
+ ] $xlconstant_1
+
+  # Create interface connections
+  connect_bd_intf_net -intf_net GT_DIFF_REFCLK0_0_1 [get_bd_intf_pins GT_DIFF_REFCLK0_0] [get_bd_intf_pins aurora_64b66b_0/GT_DIFF_REFCLK1]
+  connect_bd_intf_net -intf_net GT_SERIAL_RX_1_1 [get_bd_intf_pins GT_SERIAL_RX_1] [get_bd_intf_pins aurora_64b66b_0/GT_SERIAL_RX]
+  connect_bd_intf_net -intf_net aurora_64b66b_0_GT_SERIAL_TX [get_bd_intf_pins GT_SERIAL_TX_1] [get_bd_intf_pins aurora_64b66b_0/GT_SERIAL_TX]
+  connect_bd_intf_net -intf_net aurora_64b66b_0_USER_DATA_M_AXIS_RX [get_bd_intf_pins aurora_64b66b_0/USER_DATA_M_AXIS_RX] [get_bd_intf_pins axis_data_fifo_0/S_AXIS]
+  connect_bd_intf_net -intf_net [get_bd_intf_nets aurora_64b66b_0_USER_DATA_M_AXIS_RX] [get_bd_intf_pins axis_data_fifo_0/S_AXIS] [get_bd_intf_pins ila_2/SLOT_0_AXIS]
+  connect_bd_intf_net -intf_net axis_data_fifo_0_M_AXIS [get_bd_intf_pins USER_DATA_M_AXIS_RX] [get_bd_intf_pins axis_data_fifo_0/M_AXIS]
+  connect_bd_intf_net -intf_net axis_interconnect_0_M04_AXIS [get_bd_intf_pins USER_DATA_S_AXIS_TX] [get_bd_intf_pins aurora_64b66b_0/USER_DATA_S_AXIS_TX]
+  connect_bd_intf_net -intf_net [get_bd_intf_nets axis_interconnect_0_M04_AXIS] [get_bd_intf_pins USER_DATA_S_AXIS_TX] [get_bd_intf_pins ila_1/SLOT_0_AXIS]
+
+  # Create port connections
+  connect_bd_net -net aurora_64b66b_0_channel_up [get_bd_pins aurora_64b66b_0/channel_up] [get_bd_pins ila_0/probe0]
+  connect_bd_net -net aurora_64b66b_0_gt_pll_lock [get_bd_pins aurora_64b66b_0/gt_pll_lock] [get_bd_pins ila_0/probe1]
+  connect_bd_net -net aurora_64b66b_0_gt_powergood [get_bd_pins aurora_64b66b_0/gt_powergood] [get_bd_pins ila_0/probe12]
+  connect_bd_net -net aurora_64b66b_0_gt_qplllock_quad1_out [get_bd_pins aurora_64b66b_0/gt_qplllock_quad1_out] [get_bd_pins ila_0/probe6]
+  connect_bd_net -net aurora_64b66b_0_gt_qpllrefclklost_quad1_out [get_bd_pins aurora_64b66b_0/gt_qpllrefclklost_quad1_out] [get_bd_pins ila_0/probe7]
+  connect_bd_net -net aurora_64b66b_0_gt_reset_out [get_bd_pins aurora_64b66b_0/gt_reset_out] [get_bd_pins ila_0/probe11]
+  connect_bd_net -net aurora_64b66b_0_hard_err [get_bd_pins aurora_64b66b_0/hard_err] [get_bd_pins ila_0/probe2]
+  connect_bd_net -net aurora_64b66b_0_lane_up [get_bd_pins aurora_64b66b_0/lane_up] [get_bd_pins ila_0/probe3]
+  connect_bd_net -net aurora_64b66b_0_link_reset_out [get_bd_pins aurora_64b66b_0/link_reset_out] [get_bd_pins ila_0/probe8]
+  connect_bd_net -net aurora_64b66b_0_mmcm_not_locked_out [get_bd_pins aurora_64b66b_0/mmcm_not_locked_out] [get_bd_pins ila_0/probe4]
+  connect_bd_net -net aurora_64b66b_0_soft_err [get_bd_pins aurora_64b66b_0/soft_err] [get_bd_pins ila_0/probe5]
+  connect_bd_net -net aurora_64b66b_0_sync_clk_out [get_bd_pins aurora_64b66b_0/sync_clk_out] [get_bd_pins ila_0/probe9]
+  connect_bd_net -net aurora_64b66b_0_sys_reset_out [get_bd_pins aurora_64b66b_0/sys_reset_out] [get_bd_pins ila_0/probe10] [get_bd_pins proc_sys_reset_0/ext_reset_in]
+  connect_bd_net -net aurora_64b66b_0_user_clk_out [get_bd_pins user_clk_out] [get_bd_pins aurora_64b66b_0/user_clk_out] [get_bd_pins axis_data_fifo_0/s_axis_aclk] [get_bd_pins ila_0/clk] [get_bd_pins ila_1/clk] [get_bd_pins ila_2/clk] [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
+  connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins peripheral_aresetn] [get_bd_pins axis_data_fifo_0/s_axis_aresetn] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]
+  connect_bd_net -net reset_pb_1 [get_bd_pins reset_pb] [get_bd_pins aurora_64b66b_0/reset_pb]
+  connect_bd_net -net xlconstant_0_dout [get_bd_pins aurora_64b66b_0/loopback] [get_bd_pins xlconstant_0/dout]
+  connect_bd_net -net xlconstant_1_dout [get_bd_pins aurora_64b66b_0/power_down] [get_bd_pins xlconstant_1/dout]
+  connect_bd_net -net zynq_ultra_ps_e_0_pl_clk0 [get_bd_pins init_clk] [get_bd_pins aurora_64b66b_0/init_clk]
 
   # Restore current instance
   current_bd_instance $oldCurInst
@@ -1718,6 +1833,11 @@ proc create_root_design { parentCell } {
 
 
   # Create interface ports
+  set GT_DIFF_REFCLK0_0 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_clock_rtl:1.0 GT_DIFF_REFCLK0_0 ]
+  set_property -dict [ list \
+   CONFIG.FREQ_HZ {156250000} \
+   ] $GT_DIFF_REFCLK0_0
+
   set GT_DIFF_REFCLK1_0 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_clock_rtl:1.0 GT_DIFF_REFCLK1_0 ]
   set_property -dict [ list \
    CONFIG.FREQ_HZ {250000000} \
@@ -1725,7 +1845,11 @@ proc create_root_design { parentCell } {
 
   set GT_SERIAL_RX_0 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:display_aurora:GT_Serial_Transceiver_Pins_RX_rtl:1.0 GT_SERIAL_RX_0 ]
 
+  set GT_SERIAL_RX_1 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:display_aurora:GT_Serial_Transceiver_Pins_RX_rtl:1.0 GT_SERIAL_RX_1 ]
+
   set GT_SERIAL_TX_0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:display_aurora:GT_Serial_Transceiver_Pins_TX_rtl:1.0 GT_SERIAL_TX_0 ]
+
+  set GT_SERIAL_TX_1 [ create_bd_intf_port -mode Master -vlnv xilinx.com:display_aurora:GT_Serial_Transceiver_Pins_TX_rtl:1.0 GT_SERIAL_TX_1 ]
 
   set I2C0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:iic_rtl:1.0 I2C0 ]
 
@@ -1775,8 +1899,11 @@ proc create_root_design { parentCell } {
   set serial_data_8 [ create_bd_port -dir O -from 0 -to 0 serial_data_8 ]
   set serial_data_de [ create_bd_port -dir O -from 7 -to 0 serial_data_de ]
 
-  # Create instance: aurora
-  create_hier_cell_aurora [current_bd_instance .] aurora
+  # Create instance: aurora64b66b
+  create_hier_cell_aurora64b66b [current_bd_instance .] aurora64b66b
+
+  # Create instance: aurora8b10b
+  create_hier_cell_aurora8b10b [current_bd_instance .] aurora8b10b
 
   # Create instance: axi_clock_converter_0, and set properties
   set axi_clock_converter_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_clock_converter:2.1 axi_clock_converter_0 ]
@@ -1787,15 +1914,19 @@ proc create_root_design { parentCell } {
   # Create instance: axis_interconnect_0, and set properties
   set axis_interconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_interconnect:2.1 axis_interconnect_0 ]
   set_property -dict [ list \
+   CONFIG.ENABLE_ADVANCED_OPTIONS {0} \
+   CONFIG.ENABLE_FIFO_COUNT_PORTS {0} \
    CONFIG.M00_FIFO_DEPTH {32} \
    CONFIG.M02_FIFO_DEPTH {32} \
    CONFIG.M03_FIFO_DEPTH {32} \
-   CONFIG.NUM_MI {4} \
-   CONFIG.NUM_SI {4} \
+   CONFIG.M04_FIFO_DEPTH {32} \
+   CONFIG.NUM_MI {5} \
+   CONFIG.NUM_SI {5} \
    CONFIG.ROUTING_MODE {1} \
    CONFIG.S00_FIFO_DEPTH {32} \
    CONFIG.S02_FIFO_DEPTH {32} \
    CONFIG.S03_FIFO_DEPTH {32} \
+   CONFIG.S04_FIFO_DEPTH {32} \
  ] $axis_interconnect_0
 
   # Create instance: clk_wiz_0, and set properties
@@ -1843,10 +1974,14 @@ proc create_root_design { parentCell } {
   create_hier_cell_zynq [current_bd_instance .] zynq
 
   # Create interface connections
-  connect_bd_intf_net -intf_net CLK_IN_D_0_1 [get_bd_intf_ports GT_DIFF_REFCLK1_0] [get_bd_intf_pins aurora/CLK_IN_D_0]
-  connect_bd_intf_net -intf_net GT_SERIAL_RX_0_1 [get_bd_intf_ports GT_SERIAL_RX_0] [get_bd_intf_pins aurora/GT_SERIAL_RX_0]
-  connect_bd_intf_net -intf_net aurora_8b10b_0_GT_SERIAL_TX [get_bd_intf_ports GT_SERIAL_TX_0] [get_bd_intf_pins aurora/GT_SERIAL_TX_0]
-  connect_bd_intf_net -intf_net aurora_8b10b_0_USER_DATA_M_AXI_RX [get_bd_intf_pins aurora/USER_DATA_M_AXI_RX] [get_bd_intf_pins axis_interconnect_0/S02_AXIS]
+  connect_bd_intf_net -intf_net CLK_IN_D_0_1 [get_bd_intf_ports GT_DIFF_REFCLK1_0] [get_bd_intf_pins aurora8b10b/CLK_IN_D_0]
+  connect_bd_intf_net -intf_net GT_DIFF_REFCLK0_0_1 [get_bd_intf_ports GT_DIFF_REFCLK0_0] [get_bd_intf_pins aurora64b66b/GT_DIFF_REFCLK0_0]
+  connect_bd_intf_net -intf_net GT_SERIAL_RX_0_1 [get_bd_intf_ports GT_SERIAL_RX_0] [get_bd_intf_pins aurora8b10b/GT_SERIAL_RX_0]
+  connect_bd_intf_net -intf_net GT_SERIAL_RX_1_1 [get_bd_intf_ports GT_SERIAL_RX_1] [get_bd_intf_pins aurora64b66b/GT_SERIAL_RX_1]
+  connect_bd_intf_net -intf_net aurora_64b66b_0_GT_SERIAL_TX [get_bd_intf_ports GT_SERIAL_TX_1] [get_bd_intf_pins aurora64b66b/GT_SERIAL_TX_1]
+  connect_bd_intf_net -intf_net aurora_64b66b_0_USER_DATA_M_AXIS_RX [get_bd_intf_pins aurora64b66b/USER_DATA_M_AXIS_RX] [get_bd_intf_pins axis_interconnect_0/S04_AXIS]
+  connect_bd_intf_net -intf_net aurora_8b10b_0_GT_SERIAL_TX [get_bd_intf_ports GT_SERIAL_TX_0] [get_bd_intf_pins aurora8b10b/GT_SERIAL_TX_0]
+  connect_bd_intf_net -intf_net aurora_8b10b_0_USER_DATA_M_AXI_RX [get_bd_intf_pins aurora8b10b/USER_DATA_M_AXI_RX] [get_bd_intf_pins axis_interconnect_0/S02_AXIS]
   connect_bd_intf_net -intf_net axi_clock_converter_0_M_AXI [get_bd_intf_pins axi_clock_converter_0/M_AXI] [get_bd_intf_pins dino/S_AXI]
   connect_bd_intf_net -intf_net axi_dma_0_M_AXIS_MM2S [get_bd_intf_pins axis_interconnect_0/S00_AXIS] [get_bd_intf_pins zynq/M_AXIS_MM2S]
   connect_bd_intf_net -intf_net axi_iic_0_IIC [get_bd_intf_ports I2C0] [get_bd_intf_pins axi_iic_0/IIC]
@@ -1854,17 +1989,21 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net axi_interconnect_0_M02_AXI [get_bd_intf_pins axi_iic_0/S_AXI] [get_bd_intf_pins zynq/M02_AXI]
   connect_bd_intf_net -intf_net axis_interconnect_0_M00_AXIS [get_bd_intf_pins axis_interconnect_0/M00_AXIS] [get_bd_intf_pins zynq/S_AXIS_S2MM]
   connect_bd_intf_net -intf_net axis_interconnect_0_M01_AXIS [get_bd_intf_pins axis_interconnect_0/M01_AXIS] [get_bd_intf_pins dino/S00_AXIS]
-  connect_bd_intf_net -intf_net axis_interconnect_0_M02_AXIS [get_bd_intf_pins aurora/S_AXIS] [get_bd_intf_pins axis_interconnect_0/M02_AXIS]
+  connect_bd_intf_net -intf_net axis_interconnect_0_M02_AXIS [get_bd_intf_pins aurora8b10b/S_AXIS] [get_bd_intf_pins axis_interconnect_0/M02_AXIS]
   create_bd_intf_net axis_interconnect_0_M03_AXIS
   connect_bd_intf_net -intf_net [get_bd_intf_nets axis_interconnect_0_M03_AXIS] [get_bd_intf_pins axis_interconnect_0/M03_AXIS] [get_bd_intf_pins axis_interconnect_0/S03_AXIS]
+  connect_bd_intf_net -intf_net axis_interconnect_0_M04_AXIS [get_bd_intf_pins aurora64b66b/USER_DATA_S_AXIS_TX] [get_bd_intf_pins axis_interconnect_0/M04_AXIS]
   connect_bd_intf_net -intf_net dinoif_fast_nologic_0_M00_AXIS [get_bd_intf_pins axis_interconnect_0/S01_AXIS] [get_bd_intf_pins dino/M00_AXIS]
   connect_bd_intf_net -intf_net user_si570_sysclk_1 [get_bd_intf_ports user_si570_sysclk] [get_bd_intf_pins clk_wiz_0/CLK_IN1_D]
   connect_bd_intf_net -intf_net zynq_M03_AXI [get_bd_intf_pins axi_clock_converter_0/S_AXI] [get_bd_intf_pins zynq/M03_AXI]
 
   # Create port connections
+  connect_bd_net -net S04_AXIS_ARESETN_1 [get_bd_pins aurora64b66b/peripheral_aresetn] [get_bd_pins axis_interconnect_0/M04_AXIS_ARESETN] [get_bd_pins axis_interconnect_0/S04_AXIS_ARESETN]
   connect_bd_net -net aclk_100mhz_1 [get_bd_pins axi_clock_converter_0/m_axi_aclk] [get_bd_pins axis_interconnect_0/M01_AXIS_ACLK] [get_bd_pins axis_interconnect_0/S01_AXIS_ACLK] [get_bd_pins clk_wiz_0/clk_out100mhz] [get_bd_pins dino/aclk_100mhz]
   connect_bd_net -net aresetn_1 [get_bd_pins axi_clock_converter_0/m_axi_aresetn] [get_bd_pins axis_interconnect_0/M01_AXIS_ARESETN] [get_bd_pins axis_interconnect_0/S01_AXIS_ARESETN] [get_bd_pins clk_wiz_0/locked] [get_bd_pins dino/aresetn]
-  connect_bd_net -net aurora_8b10b_0_user_clk_out [get_bd_pins aurora/user_clk_out] [get_bd_pins axis_interconnect_0/M02_AXIS_ACLK] [get_bd_pins axis_interconnect_0/S02_AXIS_ACLK]
+  connect_bd_net -net aurora8b10b_reset [get_bd_pins aurora64b66b/reset_pb] [get_bd_pins aurora8b10b/aurora_reset]
+  connect_bd_net -net aurora_64b66b_0_user_clk_out [get_bd_pins aurora64b66b/user_clk_out] [get_bd_pins axis_interconnect_0/M04_AXIS_ACLK] [get_bd_pins axis_interconnect_0/S04_AXIS_ACLK]
+  connect_bd_net -net aurora_8b10b_0_user_clk_out [get_bd_pins aurora8b10b/user_clk_out] [get_bd_pins axis_interconnect_0/M02_AXIS_ACLK] [get_bd_pins axis_interconnect_0/S02_AXIS_ACLK]
   connect_bd_net -net axi_iic_0_iic2intc_irpt [get_bd_pins axi_iic_0/iic2intc_irpt] [get_bd_pins zynq/intr]
   connect_bd_net -net clk_wiz_0_clk_out25mhz [get_bd_pins clk_wiz_0/clk_out25mhz] [get_bd_pins dino/clk_25mhz]
   connect_bd_net -net dino_dout_0 [get_bd_ports conv_oe] [get_bd_pins dino/dino_conv_oe]
@@ -1878,12 +2017,12 @@ proc create_root_design { parentCell } {
   connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins axi_iic_0/s_axi_aresetn] [get_bd_pins axis_interconnect_0/ARESETN] [get_bd_pins axis_interconnect_0/M00_AXIS_ARESETN] [get_bd_pins axis_interconnect_0/M03_AXIS_ARESETN] [get_bd_pins axis_interconnect_0/S00_AXIS_ARESETN] [get_bd_pins axis_interconnect_0/S03_AXIS_ARESETN] [get_bd_pins zynq/peripheral_aresetn]
   connect_bd_net -net proc_sys_reset_0_peripheral_reset [get_bd_pins dino/reset] [get_bd_pins zynq/peripheral_reset]
   connect_bd_net -net reset_1 [get_bd_ports reset] [get_bd_pins zynq/reset]
-  connect_bd_net -net rst_aurora_8b10b_0_50M_peripheral_aresetn [get_bd_pins aurora/s_axis_aresetn] [get_bd_pins axis_interconnect_0/M02_AXIS_ARESETN] [get_bd_pins axis_interconnect_0/S02_AXIS_ARESETN]
+  connect_bd_net -net rst_aurora_8b10b_0_50M_peripheral_aresetn [get_bd_pins aurora8b10b/s_axis_aresetn] [get_bd_pins axis_interconnect_0/M02_AXIS_ARESETN] [get_bd_pins axis_interconnect_0/S02_AXIS_ARESETN]
   connect_bd_net -net serial_data_0_1 [get_bd_ports serial_data_1] [get_bd_pins dino/serial_data_1]
   connect_bd_net -net serial_data_de [get_bd_ports serial_data_de] [get_bd_pins dino/serial_data_de]
   connect_bd_net -net xlconstant_0_dout [get_bd_ports conv_3] [get_bd_ports conv_4] [get_bd_ports conv_5] [get_bd_ports conv_6] [get_bd_ports conv_7] [get_bd_ports conv_8] [get_bd_ports serial_clk_3] [get_bd_ports serial_clk_4] [get_bd_ports serial_clk_5] [get_bd_ports serial_clk_6] [get_bd_ports serial_clk_7] [get_bd_ports serial_clk_8] [get_bd_ports serial_data_3] [get_bd_ports serial_data_4] [get_bd_ports serial_data_5] [get_bd_ports serial_data_6] [get_bd_ports serial_data_7] [get_bd_ports serial_data_8] [get_bd_pins xlconstant_0/dout]
   connect_bd_net -net xlconstant_1_dout [get_bd_ports leds] [get_bd_pins xlconstant_1/dout]
-  connect_bd_net -net zynq_ultra_ps_e_0_pl_clk0 [get_bd_pins aurora/init_clk_in] [get_bd_pins axi_clock_converter_0/s_axi_aclk] [get_bd_pins axi_iic_0/s_axi_aclk] [get_bd_pins axis_interconnect_0/ACLK] [get_bd_pins axis_interconnect_0/M00_AXIS_ACLK] [get_bd_pins axis_interconnect_0/M03_AXIS_ACLK] [get_bd_pins axis_interconnect_0/S00_AXIS_ACLK] [get_bd_pins axis_interconnect_0/S03_AXIS_ACLK] [get_bd_pins axis_interconnect_0/S_AXI_CTRL_ACLK] [get_bd_pins zynq/pl_clk0]
+  connect_bd_net -net zynq_ultra_ps_e_0_pl_clk0 [get_bd_pins aurora64b66b/init_clk] [get_bd_pins aurora8b10b/init_clk_in] [get_bd_pins axi_clock_converter_0/s_axi_aclk] [get_bd_pins axi_iic_0/s_axi_aclk] [get_bd_pins axis_interconnect_0/ACLK] [get_bd_pins axis_interconnect_0/M00_AXIS_ACLK] [get_bd_pins axis_interconnect_0/M03_AXIS_ACLK] [get_bd_pins axis_interconnect_0/S00_AXIS_ACLK] [get_bd_pins axis_interconnect_0/S03_AXIS_ACLK] [get_bd_pins axis_interconnect_0/S_AXI_CTRL_ACLK] [get_bd_pins zynq/pl_clk0]
 
   # Create address segments
   assign_bd_address -offset 0x000800000000 -range 0x000800000000 -target_address_space [get_bd_addr_spaces zynq/axi_dma_0/Data_MM2S] [get_bd_addr_segs zynq/zynq_ultra_ps_e_0/SAXIGP0/HPC0_DDR_HIGH] -force

@@ -40,7 +40,7 @@ if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
 
 # The design that will be created by this Tcl script contains the following 
 # module references:
-# aurora_reset, config_timer, dinoif_dac, dinoif_fast_nologic, prepend_seqnum, registerif
+# aurora64b66b_nfc, aurora_reset, config_timer, dinoif_dac, dinoif_fast_nologic, prepend_seqnum, registerif
 
 # Please add the sources of those modules before sourcing this Tcl script.
 
@@ -173,6 +173,7 @@ xilinx.com:ip:floating_point:7.1\
 set bCheckModules 1
 if { $bCheckModules == 1 } {
    set list_check_mods "\ 
+aurora64b66b_nfc\
 aurora_reset\
 config_timer\
 dinoif_dac\
@@ -1705,6 +1706,17 @@ proc create_hier_cell_aurora64b66b { parentCell nameHier } {
   create_bd_pin -dir I -type rst reset_pb
   create_bd_pin -dir O -type clk user_clk_out
 
+  # Create instance: aurora64b66b_nfc_0, and set properties
+  set block_name aurora64b66b_nfc
+  set block_cell_name aurora64b66b_nfc_0
+  if { [catch {set aurora64b66b_nfc_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $aurora64b66b_nfc_0 eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
   # Create instance: aurora_64b66b_0, and set properties
   set aurora_64b66b_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:aurora_64b66b:12.0 aurora_64b66b_0 ]
   set_property -dict [ list \
@@ -1721,6 +1733,8 @@ proc create_hier_cell_aurora64b66b { parentCell nameHier } {
   set axis_data_fifo_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_data_fifo:2.0 axis_data_fifo_0 ]
   set_property -dict [ list \
    CONFIG.FIFO_DEPTH {32} \
+   CONFIG.HAS_AEMPTY {1} \
+   CONFIG.HAS_AFULL {1} \
  ] $axis_data_fifo_0
 
   # Create instance: ila_0, and set properties
@@ -1767,6 +1781,7 @@ proc create_hier_cell_aurora64b66b { parentCell nameHier } {
   # Create interface connections
   connect_bd_intf_net -intf_net GT_DIFF_REFCLK0_0_1 [get_bd_intf_pins GT_DIFF_REFCLK0_0] [get_bd_intf_pins aurora_64b66b_0/GT_DIFF_REFCLK1]
   connect_bd_intf_net -intf_net GT_SERIAL_RX_1_1 [get_bd_intf_pins GT_SERIAL_RX_1] [get_bd_intf_pins aurora_64b66b_0/GT_SERIAL_RX]
+  connect_bd_intf_net -intf_net aurora64b66b_nfc_0_m_axi_nfc [get_bd_intf_pins aurora64b66b_nfc_0/m_axi_nfc] [get_bd_intf_pins aurora_64b66b_0/NFC_S_AXIS_TX]
   connect_bd_intf_net -intf_net aurora_64b66b_0_GT_SERIAL_TX [get_bd_intf_pins GT_SERIAL_TX_1] [get_bd_intf_pins aurora_64b66b_0/GT_SERIAL_TX]
   connect_bd_intf_net -intf_net aurora_64b66b_0_USER_DATA_M_AXIS_RX [get_bd_intf_pins aurora_64b66b_0/USER_DATA_M_AXIS_RX] [get_bd_intf_pins axis_data_fifo_0/S_AXIS]
   connect_bd_intf_net -intf_net [get_bd_intf_nets aurora_64b66b_0_USER_DATA_M_AXIS_RX] [get_bd_intf_pins axis_data_fifo_0/S_AXIS] [get_bd_intf_pins ila_2/SLOT_0_AXIS]
@@ -1788,7 +1803,9 @@ proc create_hier_cell_aurora64b66b { parentCell nameHier } {
   connect_bd_net -net aurora_64b66b_0_soft_err [get_bd_pins aurora_64b66b_0/soft_err] [get_bd_pins ila_0/probe5]
   connect_bd_net -net aurora_64b66b_0_sync_clk_out [get_bd_pins aurora_64b66b_0/sync_clk_out] [get_bd_pins ila_0/probe9]
   connect_bd_net -net aurora_64b66b_0_sys_reset_out [get_bd_pins aurora_64b66b_0/sys_reset_out] [get_bd_pins ila_0/probe10] [get_bd_pins proc_sys_reset_0/ext_reset_in]
-  connect_bd_net -net aurora_64b66b_0_user_clk_out [get_bd_pins user_clk_out] [get_bd_pins aurora_64b66b_0/user_clk_out] [get_bd_pins axis_data_fifo_0/s_axis_aclk] [get_bd_pins ila_0/clk] [get_bd_pins ila_1/clk] [get_bd_pins ila_2/clk] [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
+  connect_bd_net -net aurora_64b66b_0_user_clk_out [get_bd_pins user_clk_out] [get_bd_pins aurora64b66b_nfc_0/aclk] [get_bd_pins aurora_64b66b_0/user_clk_out] [get_bd_pins axis_data_fifo_0/s_axis_aclk] [get_bd_pins ila_0/clk] [get_bd_pins ila_1/clk] [get_bd_pins ila_2/clk] [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
+  connect_bd_net -net axis_data_fifo_0_almost_empty [get_bd_pins aurora64b66b_nfc_0/start_rx] [get_bd_pins axis_data_fifo_0/almost_empty]
+  connect_bd_net -net axis_data_fifo_0_almost_full [get_bd_pins aurora64b66b_nfc_0/stop_rx] [get_bd_pins axis_data_fifo_0/almost_full]
   connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins peripheral_aresetn] [get_bd_pins axis_data_fifo_0/s_axis_aresetn] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]
   connect_bd_net -net reset_pb_1 [get_bd_pins reset_pb] [get_bd_pins aurora_64b66b_0/reset_pb]
   connect_bd_net -net xlconstant_0_dout [get_bd_pins aurora_64b66b_0/loopback] [get_bd_pins xlconstant_0/dout]

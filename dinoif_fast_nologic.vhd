@@ -4,7 +4,7 @@
 -- 
 -- Create Date: 04/12/2024
 -- Design Name: 
--- Module Name: dinoif_fast_nologic - Behavioral
+-- Module Name: dinoif_adc - Behavioral
 -- Project Name: 
 -- Target Devices: 
 -- Tool Versions: 2021.1
@@ -32,7 +32,7 @@ use IEEE.NUMERIC_STD.ALL;
 --use UNISIM.VComponents.all;
 
 -- Package IP IP-xact XML Standard
-entity dinoif_fast_nologic is
+entity dinoif_adc is
     Port ( aclk : in STD_LOGIC;
            resetn : in STD_LOGIC;
            clk_25mhz : in STD_LOGIC;
@@ -46,9 +46,9 @@ entity dinoif_fast_nologic is
            active : out STD_LOGIC
            );
            
-end dinoif_fast_nologic;
+end dinoif_adc;
 
-architecture Behavioral of dinoif_fast_nologic is
+architecture Behavioral of dinoif_adc is
     attribute X_INTERFACE_PARAMETER : string;
     ATTRIBUTE X_INTERFACE_INFO : STRING;
     ATTRIBUTE X_INTERFACE_INFO of aclk: SIGNAL is "xilinx.com:signal:clock:1.0 clk CLK";

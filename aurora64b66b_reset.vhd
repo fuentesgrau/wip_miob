@@ -32,30 +32,33 @@ use IEEE.NUMERIC_STD.ALL;
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-entity aurora_reset is
+entity aurora64b66b_reset is
     Port ( clk : in STD_LOGIC;
-           reset : out STD_LOGIC
+           locked : in STD_LOGIC;
+           reset_pb : out STD_LOGIC;
+           pma_init : out STD_LOGIC
            );
-end aurora_reset;
+end aurora64b66b_reset;
 
-architecture Behavioral of aurora_reset is
+architecture Behavioral of aurora64b66b_reset is
     signal clk_cnt : integer := 0;
-    signal do_reset : std_logic := '1';
-    
-    constant send_frequency : integer := 10000;
-    constant clock_frequency : integer := 100e6;    
-    
+    signal do_reset_pb : std_logic := '1';
+    signal do_pma_init : std_logic := '1';       
 begin
 
-reset <= do_reset;
+reset_pb <= do_reset_pb;
+pma_init <= do_pma_init;
 
-process (clk, clk_cnt) begin
+process (clk, clk_cnt,locked) begin
     if rising_edge(clk) then
-        if do_reset = '1' then
+        if locked = '1' and (do_reset_pb = '1' or do_pma_init = '1') then
             clk_cnt <= clk_cnt + 1;
         end if;
-        if clk_cnt >= 500 then
-            do_reset <= '0';
+        if clk_cnt >= 300 then
+            do_reset_pb <= '0';
+        end if;
+        if clk_cnt >= 600 then
+            do_pma_init <= '0';
         end if;
     end if;
 end process;
